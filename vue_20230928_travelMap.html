@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台灣旅遊地圖</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/my.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+</head>
+
+<body>
+    <div id="app">
+        <div class="container-fluid">
+            <div class="row vh-100">
+                <div class="col-md-3 bg-info">
+                    <select class="form-select mt-3" v-model="selectedCity">
+                        <option selected class="text-center h4">--縣市--</option>
+                        <option :value="item.CityName" v-for="item in city">
+                            {{ item.CityName }}
+                        </option>
+                    </select>
+                    <select class="form-select mt-3" v-model="selectedRegion">
+                        <option selected class="text-center h4">--鄉鎮區--</option>
+                        <option :value="item.AreaName" v-for="item in filterRegion">
+                            {{ item.AreaName }}
+                        </option>
+                    </select>
+                    <ul class="list-group mt-3" id="mylist" style="height: 85vh; overflow: scroll;">
+                        <li class="list-group-item border border-2 border-danger mt-3" v-for="item in filterHotel">
+                            <!-- <img src="images/01.jpg" class="img-fluid mb-2" alt=""> -->
+                            <h4>名稱: {{ item.HotelName }}</h4>
+                            <h4>地址: {{ item.PostalAddress.ZipCode }} {{ item.PostalAddress.City }} {{ item.PostalAddress.Town }} {{ item.PostalAddress.StreetAddress }}</h4>
+                            <h4>電話: {{ item.Telephones[0].Tel }}</h4>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-9 bg-warning p-0">
+                    <div id="map" class="vh-100 bg-success"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="js/jquery-3.7.0.min.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.1.2/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+
+$(function () {
+            //draw map
+            map = L.map('map').setView([24.1716771, 120.6093461], 13);
+
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);       
+
+            var markers = new L.markerClusterGroup().addTo(map);
+            
+           
+            });
+        const App = {
+            data() {
+                return {
+                    hotels: [], //儲存所有的旅館資料
+                    city: [],   //儲存所有台灣縣市資料 
+                    selectedCity: '',   //儲存已選取的縣市名稱
+                    selectedRegion: '',   //儲存已選取的鄉鎮區名稱
+                    filterHotels: [],   //儲存已選取的縣市和鄉鎮區名稱 該地區的所有旅館
+                }
+            },
+            created() {
+                //載入旅館opendata
+                const vm = this;
+                axios.get('js/HotelList.json')
+                    .then(function (response) {
+                        // handle success
+                        console.log(response.data.Hotels);
+                        vm.hotels = response.data.Hotels;
+                    })
+                    .catch(function (error) {
+                        // handle error
+                        console.log(error);
+                    })
+                    .finally(function () {
+                        // always executed
+                    });
+
+                //載入台灣縣市資料 
+                axios.get('js/CityCountyData.json')
+                    .then(function (response) {
+                        // handle success
+                        console.log(response);
+                        vm.city = response.data;
+                    })
+                    .catch(function (error) {
+                        // handle error
+                        console.log(error);
+                    })
+                    .finally(function () {
+                        // always executed
+                    });
+
+            },
+            computed: {
+                filterRegion() {
+                    const vm = this;
+                    let regions = [];
+                    vm.city.forEach((item, key) => {
+                        if(item.CityName == vm.selectedCity){
+                            regions = item.AreaList;
+                        }
+                    });
+                    return regions;
+                },
+                filterHotel() {
+                    const vm = this;
+                    let hotels = [];
+                    vm.hotels.forEach((item, key) => {
+                        if(vm.selectedCity == item.PostalAddress.City && vm.selectedRegion == item.PostalAddress.Town){
+                            hotels.push(item);
+                        }
+                    });
+                    vm.filterHotel = hotels;
+                    return hotels;
+                }
+            }
+        }
+        Vue.createApp(App).mount('#app');
+    </script>
+</body>
+
+</html>
